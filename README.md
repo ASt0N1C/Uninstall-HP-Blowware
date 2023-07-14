@@ -1,4 +1,6 @@
 # Uninstall-HP-Blowware
+# MUST BE RUN AS ADMINISTRATOR OR FILES WILL NOT DELETE DUE TO PERMISSIONS
+
 # first lines of code Disables and stops the windows services from starting up for wolf security and HP Sure Click.
 # the next few lines Kill the task manager processes and uninstalls the programs
 # second last line of code deletes all HP Wolf Security and HP Sure Click Files

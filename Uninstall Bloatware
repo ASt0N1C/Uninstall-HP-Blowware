@@ -1,0 +1,49 @@
+$hp_services = "BrService", "BrEndpointSvc", "BrAXService", "BrHostSvr", "SecurityUpdateService", "SFUService"
+$processes = "HP Wolf Security", "HP Sure Click", "HP.ClientSecurityManager", "BrConsole", "BrHostSvr", "BemSvc", "BrService"
+$wolfSecurityDisplayName = "HP.ClientSecurityManager.msi","HP Wolf Security -Console","HP Wolf Security","HP Sure Click Secure Browser","HP Security Update Service"
+$folderpaths = "C:\Program Files\HP\Sure Click", "C:\Program Files\HP\HP Client Security Manager", "C:\Program Files\HP\Sure Click\4.4.2.1075", "C:\Program Files\HP\Security Update Service", "C:\Program Files\HP\Sure Click"
+
+foreach ($service in $hp_services) {
+    try {
+        Stop-Service -Name $service -Force
+        Set-Service -Name $service -StartupType Disabled
+    } catch {
+        Write-Host "Cannot Stop or Disable Service: $service"
+    }
+}
+
+foreach ($process in $processes) {
+    Get-Process -Name $process -ErrorAction SilentlyContinue | Stop-Process -Force
+}
+
+$wolfSecurity = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -eq $wolfSecurityDisplayName }
+if ($wolfSecurity) {
+    $uninstallArgs = "/x " + $wolfSecurity.IdentifyingNumber + " /quiet"
+    Start-Process -FilePath "msiexec.exe" -ArgumentList $uninstallArgs -Waitrr
+    Write-Host "Wolf Security has been uninstalled."
+} else {
+    Write-Host "HP Bloatware is being Uninstalled."
+    foreach ($folder in $folderpaths) {
+        try {
+            Remove-Item -Path $folder -Recurse -Force
+        } catch {
+            Write-Host "Failed to find folder: $folder"
+        }
+    }
+}
+
+$shell = New-Object -ComObject WScript.Shell
+$startMenuPath = [Environment]::GetFolderPath('CommonStartMenu')
+$programsPath = Join-Path -Path $startMenuPath -ChildPath 'Programs'
+$shortcuts = Get-ChildItem -Path $programsPath -Filter *.lnk -File -Recurse
+
+foreach ($shortcut in $shortcuts) {
+    $shortcutPath = $shortcut.FullName
+    $targetPath = $shell.CreateShortcut($shortcutPath).TargetPath
+    if ([string]::IsNullOrEmpty($targetPath) -or -not (Test-Path -Path $targetPath)) {
+        Write-Host "Deleting broken shortcut: $shortcutPath"
+        Remove-Item -Path $shortcutPath -Force
+    }
+}
+
+Write-Host "Script Has Fully Executed"
